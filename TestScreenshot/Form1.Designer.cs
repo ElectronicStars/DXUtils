@@ -303,7 +303,7 @@
             // 
             this.cbDrawOverlay.AutoSize = true;
             this.cbDrawOverlay.Checked = true;
-            this.cbDrawOverlay.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.cbDrawOverlay.CheckState = System.Windows.Forms.CheckState.Unchecked;
             this.cbDrawOverlay.Location = new System.Drawing.Point(8, 617);
             this.cbDrawOverlay.Margin = new System.Windows.Forms.Padding(4, 5, 4, 5);
             this.cbDrawOverlay.Name = "cbDrawOverlay";

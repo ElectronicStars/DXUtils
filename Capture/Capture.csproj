@@ -144,6 +144,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\camera-shutter-click-03.wav" />
+    <Content Include="Resources\beep-24.wav" />
     <Content Include="sharpdx_direct3d11_effects_x64.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

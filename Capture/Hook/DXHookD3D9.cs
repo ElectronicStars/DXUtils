@@ -39,9 +39,7 @@ namespace Capture.Hook
         bool _renderTargetCopyLocked = false;
         Surface _renderTargetCopy;
         Surface _resolvedTarget;
-
-
-
+      
 
         protected override string HookName
         {
@@ -68,6 +66,7 @@ namespace Capture.Hook
             {
                 using (var renderForm = new System.Windows.Forms.Form())
                 {
+                 
                     using (device = new Device(d3d, 0, DeviceType.NullReference, IntPtr.Zero, CreateFlags.HardwareVertexProcessing, new PresentParameters() { BackBufferWidth = 1, BackBufferHeight = 1, DeviceWindowHandle = renderForm.Handle }))
                     {
                         //renderForm.keypress = () => { this.DebugMessage("KEYPRESS"); };
@@ -231,14 +230,14 @@ namespace Capture.Hook
                         _overlayEngine.SpriteOnLostDevice();
                     }
                 }
-              
+
                 Cleanup();
 
                 DebugMessage("Resetting hook");
              
             }catch
             {
-
+                DebugMessage("Boo hoo");
             }
             return Direct3DDevice_ResetHook.Original(devicePtr, ref presentParameters);
         }
@@ -252,7 +251,7 @@ namespace Capture.Hook
             DeviceEx device = (DeviceEx)devicePtr;
 
             DoCaptureRenderTarget(device, "PresentEx");
-
+            DebugMessage("PresentExHook");
             return Direct3DDeviceEx_PresentExHook.Original(devicePtr, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion, dwFlags);
         }
         
@@ -263,7 +262,7 @@ namespace Capture.Hook
             Device device = (Device)devicePtr;
 
             DoCaptureRenderTarget(device, "PresentHook");
-
+            //DebugMessage("PresentHook");
             return Direct3DDevice_PresentHook.Original(devicePtr, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
         }
 
@@ -279,7 +278,7 @@ namespace Capture.Hook
 
             if (!_isUsingPresent)
                 DoCaptureRenderTarget(device, "EndSceneHook");
-
+            //DebugMessage("EndSceneHook");
             return Direct3DDevice_EndSceneHook.Original(devicePtr);
         }
 

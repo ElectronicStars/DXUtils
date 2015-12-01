@@ -37,7 +37,7 @@ namespace Capture.Hook
         {
             Dispose(false);
         }
-
+    
         void InterfaceEventProxy_DisplayText(DisplayTextEventArgs args)
         {
             TextDisplay = new TextDisplay()

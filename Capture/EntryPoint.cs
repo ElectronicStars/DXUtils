@@ -9,6 +9,7 @@ using System.Runtime.Remoting.Channels.Ipc;
 using System.Runtime.InteropServices;
 using System.Threading;
 using SharpDX;
+using System.Diagnostics;
 
 namespace Capture
 {
@@ -17,7 +18,7 @@ namespace Capture
         [DllImport("user32.dll")]
         static extern short GetAsyncKeyState(System.Windows.Forms.Keys vKey);
         System.Media.SoundPlayer player = new System.Media.SoundPlayer(Properties.Resources.camera_click);
-
+        System.Media.SoundPlayer player_beep = new System.Media.SoundPlayer(Properties.Resources.beep);
 
         List<IDXHook> _directXHooks = new List<IDXHook>();
         IDXHook _directXHook = null;
@@ -186,44 +187,56 @@ namespace Capture
         {
             while (true)
             {
-
+                var minimized = false;
                 try
-                {
-                    if (GetAsyncKeyState(_directXHook.Config.screenshotHotkey) != 0)
                     {
+                    Process currentProcess = Process.GetCurrentProcess();
+                    IntPtr handle = currentProcess.MainWindowHandle;
 
-                        var s = _directXHook.Interface.GetScreenshot(new System.Drawing.Rectangle(0, 0, 0, 0), new TimeSpan(0, 0, 10), null, Capture.Interface.ImageFormat.Png);
-                        System.Threading.Tasks.Task.Factory.StartNew(() =>
-                      {
+                    if (!NativeMethods.IsWindowInForeground(handle) || NativeMethods.IsIconic(handle))
+                    {
+                        minimized = true;
+                    }
 
-                          player.Play();
-                          _interface.SendScreenshotToClient(s);
+                    if (!minimized)
+                    {
+                    
+                            if (GetAsyncKeyState(_directXHook.Config.screenshotHotkey) != 0)
+                            {
+                                 var s = _directXHook.Interface.GetScreenshot(new System.Drawing.Rectangle(0, 0, 0, 0), new TimeSpan(0, 0, 10), null, Capture.Interface.ImageFormat.Png);
+                                System.Threading.Tasks.Task.Factory.StartNew(() =>
+                              {
 
-                      });
+                                  player.Play();
+                                  _interface.SendScreenshotToClient(s);
+
+                              });
                         
   
-                    }
-                    if (GetAsyncKeyState(_directXHook.Config.reportCheatHotkey) != 0)
-                    {
+                            }
+                            if (GetAsyncKeyState(_directXHook.Config.reportCheatHotkey) != 0)
+                            {
+                       
+                                var s = _directXHook.Interface.GetScreenshot(new System.Drawing.Rectangle(0, 0, 0, 0), new TimeSpan(0, 0, 10), null, Capture.Interface.ImageFormat.Png);
+                                System.Threading.Tasks.Task.Factory.StartNew(() =>
+                                {
+                                    player_beep.Play();
+                                    _interface.SendCheatReportToClient(s);
 
-                        var s = _directXHook.Interface.GetScreenshot(new System.Drawing.Rectangle(0, 0, 0, 0), new TimeSpan(0, 0, 10), null, Capture.Interface.ImageFormat.Png);
-                        System.Threading.Tasks.Task.Factory.StartNew(() =>
-                        {
-                            _interface.SendCheatReportToClient(s);
-
-                        });
+                                });
                         
-                      //  System.Console.Beep(500, 600);
+                              //  System.Console.Beep(500, 600);
 
-                    }
-                    System.Threading.Thread.Sleep(200);
+                            }
+                            System.Threading.Thread.Sleep(200);
+                        }
+                    
                 }
                 catch (Exception e)
                 {
                     //_interface.Message(MessageType.Error, "Error in Key Listener {0}", e.ToString());
 
                 }
-              
             }
         }
 
