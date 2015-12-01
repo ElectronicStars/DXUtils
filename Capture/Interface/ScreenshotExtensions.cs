@@ -23,6 +23,12 @@ namespace Capture.Interface
                 if (handle.IsAllocated)
                     handle.Free();
             }
+
+          
+       
+                //var img = new Bitmap(width, height, stride, pixelFormat,);
+                //return img;
+          
         }
 
         public static Bitmap ToBitmap(this Screenshot screenshot)

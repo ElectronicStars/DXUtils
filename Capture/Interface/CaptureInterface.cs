@@ -143,15 +143,17 @@ namespace Capture.Interface
                 Screenshot result = null;
                 _requestId = Guid.NewGuid();
                 _wait.Reset();
-
+                this.Message(MessageType.Debug, "Entered lock");
                 SafeInvokeScreenshotRequested(new ScreenshotRequest(_requestId.Value, region)
                 {
                     Format = format,
                     Resize = resize,
                 });
-
+                this.Message(MessageType.Debug, "GetScreenshot 2) Screenshot Requested");
                 _completeScreenshot = (sc) =>
                 {
+                    this.Message(MessageType.Debug, "GetScreenshot 4) Continuing!");
+
                     try
                     {
                         Interlocked.Exchange(ref result, sc);
@@ -164,8 +166,11 @@ namespace Capture.Interface
                         
                 };
                 //Stops current thread until it gets signal from from _completeScreenshot
+                this.Message(MessageType.Debug, "GetScreenshot 3) We wait");
+
                 _wait.WaitOne(timeout);
                 _completeScreenshot = null;
+
                 return result;
             }
         }

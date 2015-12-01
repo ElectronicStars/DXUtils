@@ -300,7 +300,7 @@ namespace Capture.Hook
                 bool qryResult;
                 if (_queryIssued && _requestCopy != null && _query.GetData(out qryResult, false))
                 {
-                   // this.DebugMessage("Im running a query");
+                   this.DebugMessage("Im running a query");
 
                     // The GPU has finished copying data to _renderTargetCopy, we can now lock
                     // the data and access it on another thread.
@@ -317,10 +317,11 @@ namespace Capture.Hook
                     {
                         lock (_lockRenderTarget)
                         {
+                            this.DebugMessage("Locked Render target, Goint to process the capture");
                             ProcessCapture(rect.Width, rect.Height, lockedRect.Pitch, _renderTargetCopy.Description.Format.ToPixelFormat(), lockedRect.DataPointer, _requestCopy);
                         }
                     });
-                    //this.DebugMessage("I finished the query");
+                    this.DebugMessage("I finished the query");
 
                 }
 
@@ -409,7 +410,7 @@ namespace Capture.Hook
                             
                         // Copy data from resolved target to our render target copy
                         device.GetRenderTargetData(_resolvedTarget, _renderTargetCopy);
-                        //this.DebugMessage("Wasalt hawn? pt7");
+                        this.DebugMessage("Wasalt hawn? pt7");
 
                         _requestCopy = Request.Clone();
                         _query.Issue(Issue.End);

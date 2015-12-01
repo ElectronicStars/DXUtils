@@ -185,12 +185,13 @@ namespace Capture.Hook
                 DebugMessage("Unsupported render target format");
                 return;
             }
-
+            this.DebugMessage("Start Process Capture");
             // Copy the image data from the buffer
             int size = height * pitch;
             var data = new byte[size];
             Marshal.Copy(pBits, data, 0, size);
 
+            this.DebugMessage("Prepare Response");
             // Prepare the response
             Screenshot response = null;
 
@@ -206,37 +207,65 @@ namespace Capture.Hook
                     Stride = pitch
                 };
             }
-            else 
+            else
             {
                 // Return an image
-                using (var bm = data.ToBitmap(width, height, pitch, format))
+                GCHandle handle = GCHandle.Alloc(data, GCHandleType.Pinned);
+                //using (var bm = data.ToBitmap(width, height, pitch, format))
+                //{
+                try
                 {
-                    System.Drawing.Imaging.ImageFormat imgFormat = System.Drawing.Imaging.ImageFormat.Bmp;
-                    switch (request.Format)
-                    {
-                        case Capture.Interface.ImageFormat.Jpeg:
-                            imgFormat = System.Drawing.Imaging.ImageFormat.Jpeg;
-                            break;
-                        case Capture.Interface.ImageFormat.Png:
-                            imgFormat = System.Drawing.Imaging.ImageFormat.Png;
-                            break;
-                    }
 
-                    response = new Screenshot(request.RequestId, bm.ToByteArray(imgFormat))
+                    using (var bm = new Bitmap(width, height, pitch, format, handle.AddrOfPinnedObject()))
                     {
-                        Format = request.Format,
-                        Height = bm.Height,
-                        Width = bm.Width
-                    };
+
+                        System.Drawing.Imaging.ImageFormat imgFormat = System.Drawing.Imaging.ImageFormat.Bmp;
+                        switch (request.Format)
+                        {
+                            case Capture.Interface.ImageFormat.Jpeg:
+                                imgFormat = System.Drawing.Imaging.ImageFormat.Jpeg;
+                                break;
+                            case Capture.Interface.ImageFormat.Png:
+                                imgFormat = System.Drawing.Imaging.ImageFormat.Png;
+                                break;
+                        }
+
+
+                        this.DebugMessage("Qabel Bil-bajd e ray!");
+                        try
+                        {
+
+
+                            response = new Screenshot(request.RequestId, bm.ToByteArray(imgFormat))
+                            {
+                                Format = request.Format,
+                                Height = bm.Height,
+                                Width = bm.Width
+                            };
+                        }
+                        catch (Exception e)
+                        {
+                            this.DebugMessage(e.ToString());
+                        }
+                        this.DebugMessage("Wara Bil-bajd e ray!");
+                    }
+                }   
+                finally
+                {
+                    if (handle.IsAllocated)
+                        handle.Free();
                 }
             }
 
             // Send the response
+
+            this.DebugMessage("Going to send Response");
             SendResponse(response);
         }
 
         protected void SendResponse(Screenshot response)
         {
+            this.DebugMessage("Send Response");
             System.Threading.Tasks.Task.Factory.StartNew(() =>
             {
                 try
