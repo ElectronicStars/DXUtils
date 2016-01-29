@@ -159,7 +159,7 @@ namespace Capture.Hook
             Direct3DDevice_ResetHook.Activate();
             Hooks.Add(Direct3DDevice_ResetHook);
 
-            this.DebugMessage("Hook: End");
+            //this.DebugMessage("Hook: End");
         }
 
         /// <summary>
@@ -233,11 +233,11 @@ namespace Capture.Hook
 
                 Cleanup();
 
-                DebugMessage("Resetting hook");
+                //DebugMessage("Resetting hook");
              
             }catch
             {
-                DebugMessage("Boo hoo");
+                //DebugMessage("Boo hoo");
             }
             return Direct3DDevice_ResetHook.Original(devicePtr, ref presentParameters);
         }
@@ -300,7 +300,7 @@ namespace Capture.Hook
                 bool qryResult;
                 if (_queryIssued && _requestCopy != null && _query.GetData(out qryResult, false))
                 {
-                   this.DebugMessage("Im running a query");
+                   //this.DebugMessage("Im running a query");
 
                     // The GPU has finished copying data to _renderTargetCopy, we can now lock
                     // the data and access it on another thread.
@@ -317,11 +317,11 @@ namespace Capture.Hook
                     {
                         lock (_lockRenderTarget)
                         {
-                            this.DebugMessage("Locked Render target, Goint to process the capture");
+                            //this.DebugMessage("Locked Render target, Goint to process the capture");
                             ProcessCapture(rect.Width, rect.Height, lockedRect.Pitch, _renderTargetCopy.Description.Format.ToPixelFormat(), lockedRect.DataPointer, _requestCopy);
                         }
                     });
-                    this.DebugMessage("I finished the query");
+                    //this.DebugMessage("I finished the query");
 
                 }
 
@@ -410,12 +410,12 @@ namespace Capture.Hook
                             
                         // Copy data from resolved target to our render target copy
                         device.GetRenderTargetData(_resolvedTarget, _renderTargetCopy);
-                        this.DebugMessage("Wasalt hawn? pt7");
+                        //this.DebugMessage("Wasalt hawn? pt7");
 
                         _requestCopy = Request.Clone();
                         _query.Issue(Issue.End);
                         _queryIssued = true;
-                       this.DebugMessage("Captured!");
+                       //this.DebugMessage("Captured!");
                       
                        resetRequest = true;
 
@@ -426,11 +426,11 @@ namespace Capture.Hook
                        
                         if ((bool)_requestWait)
                         {
-                            this.DebugMessage(se.Message + " @ " + Timer.ElapsedMilliseconds);
+                            //this.DebugMessage(se.Message + " @ " + Timer.ElapsedMilliseconds);
                             var mils  =Timer.ElapsedMilliseconds;
                             if ((mils - _waitTimeStart) > 4000){
 
-                               this.DebugMessage("Giving up at " + Environment.TickCount);
+                               //this.DebugMessage("Giving up at " + Environment.TickCount);
                                resetRequest = true;
                             }
 
@@ -449,7 +449,7 @@ namespace Capture.Hook
                         //         the whole process if sending frame by frame.
                         if (resetRequest)
                         {
-                            this.DebugMessage("Resetting");
+                            //this.DebugMessage("Resetting");
                             Request = null;
                             _waitTimeStart = null;
                             _requestWait = false;

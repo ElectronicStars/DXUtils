@@ -143,16 +143,16 @@ namespace Capture.Interface
                 Screenshot result = null;
                 _requestId = Guid.NewGuid();
                 _wait.Reset();
-                this.Message(MessageType.Debug, "Entered lock");
+                //this.Message(MessageType.Debug, "Entered lock");
                 SafeInvokeScreenshotRequested(new ScreenshotRequest(_requestId.Value, region)
                 {
                     Format = format,
                     Resize = resize,
                 });
-                this.Message(MessageType.Debug, "GetScreenshot 2) Screenshot Requested");
+                //this.Message(MessageType.Debug, "GetScreenshot 2) Screenshot Requested");
                 _completeScreenshot = (sc) =>
                 {
-                    this.Message(MessageType.Debug, "GetScreenshot 4) Continuing!");
+                    //this.Message(MessageType.Debug, "GetScreenshot 4) Continuing!");
 
                     try
                     {
@@ -166,13 +166,20 @@ namespace Capture.Interface
                         
                 };
                 //Stops current thread until it gets signal from from _completeScreenshot
-                this.Message(MessageType.Debug, "GetScreenshot 3) We wait");
+                //this.Message(MessageType.Debug, "GetScreenshot 3) We wait");
 
                 _wait.WaitOne(timeout);
                 _completeScreenshot = null;
 
                 return result;
             }
+        }
+
+
+        //For convenience
+        public IAsyncResult BeginGetScreenshot_FullPng(Rectangle region, TimeSpan timeout, AsyncCallback callback)
+        {
+            return BeginGetScreenshot(region, timeout, callback, null, ImageFormat.Png);
         }
 
         public IAsyncResult BeginGetScreenshot(Rectangle region, TimeSpan timeout, AsyncCallback callback = null, Size? resize = null, ImageFormat format = ImageFormat.Bitmap)
@@ -238,9 +245,9 @@ namespace Capture.Interface
 
 
 
-        public void SendCheatReportToClient(Screenshot s)
+        public void SendCheatReportToClient()
         {
-             SafeInvokeCheatReportReceived(new CheatReportReceivedEventArgs(s));
+             SafeInvokeCheatReportReceived(new CheatReportReceivedEventArgs());
         }
         /// <summary>
         /// Display text in-game for the default duration of 5 seconds
@@ -393,7 +400,7 @@ namespace Capture.Interface
                 return;         //No Listeners
 
             CheatReportReceivedEvent listener = null;
-            Delegate[] dels = CheatReportReceived.GetInvocationList();estars://launch/csgo/123
+            Delegate[] dels = CheatReportReceived.GetInvocationList();
 
             foreach (Delegate del in dels)
             {

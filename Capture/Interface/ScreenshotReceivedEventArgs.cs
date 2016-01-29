@@ -21,12 +21,12 @@ namespace Capture.Interface
     public class CheatReportReceivedEventArgs : MarshalByRefObject
     {
         public DateTime Time { get; set; }
-        public Screenshot Screenshot { get; set; }
+        //public Screenshot Screenshot { get; set; }
 
-        public CheatReportReceivedEventArgs(Screenshot screenshot)
+        public CheatReportReceivedEventArgs()
         {
             Time = DateTime.Now;
-            Screenshot = screenshot;
+            //Screenshot = screenshot;
         }
     }
 
