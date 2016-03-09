@@ -51,6 +51,7 @@ namespace Capture.Hook
         {
             
             this.Request = request;
+            this.RequestP1 = true;
         }
 
         protected Stopwatch Timer { get; set; }
@@ -185,13 +186,13 @@ namespace Capture.Hook
                 DebugMessage("Unsupported render target format");
                 return;
             }
-            this.DebugMessage("Start Process Capture");
+            //this.DebugMessage("Start Process Capture");
             // Copy the image data from the buffer
             int size = height * pitch;
             var data = new byte[size];
             Marshal.Copy(pBits, data, 0, size);
 
-            this.DebugMessage("Prepare Response");
+            //this.DebugMessage("Prepare Response");
             // Prepare the response
             Screenshot response = null;
 
@@ -231,7 +232,7 @@ namespace Capture.Hook
                         }
 
 
-                        this.DebugMessage("Qabel Bil-bajd e ray!");
+                        //this.DebugMessage("Qabel Bil-bajd e ray!");
                         try
                         {
 
@@ -247,7 +248,7 @@ namespace Capture.Hook
                         {
                             this.DebugMessage(e.ToString());
                         }
-                        this.DebugMessage("Wara Bil-bajd e ray!");
+                        //this.DebugMessage("Wara Bil-bajd e ray!");
                     }
                 }   
                 finally
@@ -259,13 +260,13 @@ namespace Capture.Hook
 
             // Send the response
 
-            this.DebugMessage("Going to send Response");
+            //this.DebugMessage("Going to send Response");
             SendResponse(response);
         }
 
         protected void SendResponse(Screenshot response)
         {
-            this.DebugMessage("Send Response");
+            //this.DebugMessage("Send Response");
             System.Threading.Tasks.Task.Factory.StartNew(() =>
             {
                 try
@@ -377,6 +378,8 @@ namespace Capture.Hook
             get { return _request; }
             set { Interlocked.Exchange(ref _request, value);  }
         }
+
+        protected bool RequestP1 = false;
 
         protected List<Hook> Hooks = new List<Hook>();
         public abstract void Hook();

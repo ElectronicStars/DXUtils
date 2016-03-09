@@ -251,7 +251,7 @@ namespace Capture.Hook
             DeviceEx device = (DeviceEx)devicePtr;
 
             DoCaptureRenderTarget(device, "PresentEx");
-            DebugMessage("PresentExHook");
+            //DebugMessage("PresentExHook");
             return Direct3DDeviceEx_PresentExHook.Original(devicePtr, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion, dwFlags);
         }
         
@@ -284,14 +284,25 @@ namespace Capture.Hook
 
         Capture.Hook.DX9.DXOverlayEngine _overlayEngine;
 
+        //bool RequestP1 = false;
+        bool RequestP2 = false;
+
+        bool RequestP3 = false;
+        bool RequestP4 = false;
+
+
+
         /// <summary>
         /// Implementation of capturing from the render target of the Direct3D9 Device (or DeviceEx)
         /// </summary>
         /// <param name="device"></param>
         void DoCaptureRenderTarget(Device device, string hook)
         {
-            this.Frame();
+            //this.Frame();
+           
             
+
+
             try
             {
                 #region Screenshot Request
@@ -300,6 +311,7 @@ namespace Capture.Hook
                 bool qryResult;
                 if (_queryIssued && _requestCopy != null && _query.GetData(out qryResult, false))
                 {
+                    long start_time = Timer.ElapsedMilliseconds;
                    //this.DebugMessage("Im running a query");
 
                     // The GPU has finished copying data to _renderTargetCopy, we can now lock
@@ -319,111 +331,164 @@ namespace Capture.Hook
                         {
                             //this.DebugMessage("Locked Render target, Goint to process the capture");
                             ProcessCapture(rect.Width, rect.Height, lockedRect.Pitch, _renderTargetCopy.Description.Format.ToPixelFormat(), lockedRect.DataPointer, _requestCopy);
+                           _renderTargetCopy.UnlockRectangle();
+                           _renderTargetCopyLocked = false;
                         }
                     });
                     //this.DebugMessage("I finished the query");
-
+                    long end_time = Timer.ElapsedMilliseconds;
+                    this.DebugMessage(hook + ": Query time: " + (end_time - start_time).ToString());
                 }
 
                 // Single frame capture request
                 if (this.Request != null)
-                
                 {
-                    //start timer and set flag
-                    if (_waitTimeStart == null) {
-                        _waitTimeStart = Timer.ElapsedMilliseconds;
-                    }
-
-                    if (_requestWait == null)
-                    {
-                        _requestWait = true;
-                    }
-                    //this.DebugMessage("I have a request");
-                    //this.DebugMessage(this.Request.ToString());
-                   // this.DebugMessage((device.GetRenderTarget(0) != null).ToString());
-                  
-
-                    DateTime start = DateTime.Now;
+        
+                   
                     try
                     {
-                        using (Surface renderTarget = device.GetRenderTarget(0))
+
+                        if (this.RequestP4)
                         {
-                           // this.DebugMessage("Wasalt hawn?");
-                            int width, height;
+                            long start_time = Timer.ElapsedMilliseconds;
 
-                            // If resizing of the captured image, determine correct dimensions
-                            if (Request.Resize != null && (renderTarget.Description.Width > Request.Resize.Value.Width || renderTarget.Description.Height > Request.Resize.Value.Height))
-                            {
-                                if (renderTarget.Description.Width > Request.Resize.Value.Width)
-                                {
-                                    width = Request.Resize.Value.Width;
-                                    height = (int)Math.Round((renderTarget.Description.Height * ((double)Request.Resize.Value.Width / (double)renderTarget.Description.Width)));
-                                }
-                                else
-                                {
-                                    height = Request.Resize.Value.Height;
-                                    width = (int)Math.Round((renderTarget.Description.Width * ((double)Request.Resize.Value.Height / (double)renderTarget.Description.Height)));
-                                }
-                            }
-                            else
-                            {
-                                width = renderTarget.Description.Width;
-                                height = renderTarget.Description.Height;
-                            }
-                           // this.DebugMessage("Wasalt hawn? pt2");
+                            // Copy data from resolved target to our render target copy
+                            device.GetRenderTargetData(_resolvedTarget, _renderTargetCopy);
+                            this.DebugMessage(hook + ":RenderTargetData: " + (Timer.ElapsedMilliseconds - start_time).ToString());
 
-                            // If existing _renderTargetCopy, ensure that it is the correct size and format
-                            if (_renderTargetCopy != null && (_renderTargetCopy.Description.Width != width || _renderTargetCopy.Description.Height != height || _renderTargetCopy.Description.Format != renderTarget.Description.Format))
-                            {
-                                // Cleanup resources
-                                Cleanup();
-                            }
-                           // this.DebugMessage("Wasalt hawn? pt3");
+                            _requestCopy = Request.Clone();
+                            _query.Issue(Issue.End);
+                            _queryIssued = true;
 
-                            // Ensure that we have something to put the render target data into
-                            if (!_resourcesInitialised || _renderTargetCopy == null)
-                            {
-                                CreateResources(device, width, height, renderTarget.Description.Format);
-                            }
-                            //this.DebugMessage("Wasalt hawn? pt4");
-
-                            // Resize from render target Surface to resolvedSurface (also deals with resolving multi-sampling)
-                            device.StretchRectangle(renderTarget, _resolvedTarget, TextureFilter.None);
-                            //this.DebugMessage("Wasalt hawn? pt5");
+                            resetRequest = true;
+                            this.RequestP4 = false;
 
                         }
 
-                        // If the render target is locked from a previous request unlock it
-                        if (_renderTargetCopyLocked)
+                        if (this.RequestP3)
                         {
-                            // Wait for the the ProcessCapture thread to finish with it
-                            lock (_lockRenderTarget)
+                            long start_time = Timer.ElapsedMilliseconds;
+
+                            //if (_renderTargetCopyLocked)
+                            //{
+                            //    // Wait for the the ProcessCapture thread to finish with it
+                            //    lock (_lockRenderTarget)
+                            //    {
+                            //        if (_renderTargetCopyLocked)
+                            //        {
+                            //            _renderTargetCopy.UnlockRectangle();
+                            //            _renderTargetCopyLocked = false;
+                            //        }
+                            //    }
+                            //}
+
+                            if (!_renderTargetCopyLocked)
                             {
-                                if (_renderTargetCopyLocked)
-                                {
-                                    _renderTargetCopy.UnlockRectangle();
-                                    _renderTargetCopyLocked = false;
-                                }
+
+
+                                this.DebugMessage(hook + ":Lock Rect: " + (Timer.ElapsedMilliseconds - start_time).ToString());
+
+                                this.RequestP3 = false;
+                                this.RequestP4 = true;
+
                             }
                         }
-                       // this.DebugMessage("Wasalt hawn? pt6");
+
+                        if (this.RequestP2)
+                        {
+                            long start_time = Timer.ElapsedMilliseconds;
+
+                            using (Surface renderTarget = device.GetRenderTarget(0))
+                            {
+                                device.StretchRectangle(renderTarget, _resolvedTarget, TextureFilter.None);
+
+                                this.DebugMessage(hook + ":Stretch Rect: " + (Timer.ElapsedMilliseconds - start_time).ToString());
+                                this.RequestP2 = false;
+                                this.RequestP3 = true;
+                            }
+                        }
+
+
+                        if (this.RequestP1)
+                        {
+                            long start_time = Timer.ElapsedMilliseconds;
+
+                            //start timer and set flag
+                            if (_waitTimeStart == null)
+                            {
+                                _waitTimeStart = Timer.ElapsedMilliseconds;
+                            }
+
+                            using (Surface renderTarget = device.GetRenderTarget(0))
+                            {
+                                // Ensure that we have something to put the render target data into
+                                if (!_resourcesInitialised || _renderTargetCopy == null)
+                                {
+                                    CreateResources(device, renderTarget.Description.Width, renderTarget.Description.Height, renderTarget.Description.Format);
+                                }
+                            }
+                            this.RequestP1 = false;
+                            this.RequestP2 = true;
+                        }
+
+          
+
+                   
+
+
+                       // using (Surface renderTarget = device.GetRenderTarget(0))
+                       // {
                             
-                        // Copy data from resolved target to our render target copy
-                        device.GetRenderTargetData(_resolvedTarget, _renderTargetCopy);
-                        //this.DebugMessage("Wasalt hawn? pt7");
+                       //     // Ensure that we have something to put the render target data into
+                       //     if (!_resourcesInitialised || _renderTargetCopy == null)
+                       //     {
+                       //         CreateResources(device, renderTarget.Description.Width, renderTarget.Description.Height, renderTarget.Description.Format);
+                       //     }
 
-                        _requestCopy = Request.Clone();
-                        _query.Issue(Issue.End);
-                        _queryIssued = true;
-                       //this.DebugMessage("Captured!");
+                       //     this.DebugMessage(hook + ":Resource Creation: " + (Timer.ElapsedMilliseconds - start_time).ToString());
+
+                           
+                       //     // Resize from render target Surface to resolvedSurface (also deals with resolving multi-sampling)
+                       //     device.StretchRectangle(renderTarget, _resolvedTarget, TextureFilter.None);
+
+                       //     this.DebugMessage(hook + ":Stretch Rect: " + (Timer.ElapsedMilliseconds - start_time).ToString());
+
+                       //     }
+
+                       //     // If the render target is locked from a previous request unlock it
+                       //     if (_renderTargetCopyLocked)
+                       //     {
+                       //         // Wait for the the ProcessCapture thread to finish with it
+                       //         lock (_lockRenderTarget)
+                       //         {
+                       //             if (_renderTargetCopyLocked)
+                       //             {
+                       //                 _renderTargetCopy.UnlockRectangle();
+                       //                 _renderTargetCopyLocked = false;
+                       //             }
+                       //         }
+                       //     }
+
+                       //     this.DebugMessage(hook + ":Lock Rect: " + (Timer.ElapsedMilliseconds - start_time).ToString());
+
+                       //     // Copy data from resolved target to our render target copy
+                       //     device.GetRenderTargetData(_resolvedTarget, _renderTargetCopy);
+
+                       //     this.DebugMessage(hook + ":RenderTargetData: " + (Timer.ElapsedMilliseconds - start_time).ToString());
+                       //     //device.GetRenderTargetData(renderTarget, _renderTargetCopy);
+                       // //}
+                       // _requestCopy = Request.Clone();
+                       // _query.Issue(Issue.End);
+                       // _queryIssued = true;
                       
-                       resetRequest = true;
+                       //resetRequest = true;
 
 
                     }
                     catch (SharpDX.SharpDXException se)
                     {
-                       
+                        this.DebugMessage(se.StackTrace);
+                        this.DebugMessage(se.Message);
                         if ((bool)_requestWait)
                         {
                             //this.DebugMessage(se.Message + " @ " + Timer.ElapsedMilliseconds);
@@ -439,7 +504,7 @@ namespace Capture.Hook
                     catch (Exception ex)
                     {
                        // this.DebugMessage(ex.GetType().ToString());
-                       // this.DebugMessage(ex.Message);
+                        this.DebugMessage(ex.Message);
                     }
                     finally
                     {
@@ -449,88 +514,87 @@ namespace Capture.Hook
                         //         the whole process if sending frame by frame.
                         if (resetRequest)
                         {
-                            //this.DebugMessage("Resetting");
                             Request = null;
                             _waitTimeStart = null;
                             _requestWait = false;
                             resetRequest = false;
 
                         }
+                        //this.DebugMessage(hook + ":Finally: " + (Timer.ElapsedMilliseconds - start_time).ToString());
                     }
-                    DateTime end = DateTime.Now;
-                 //   this.DebugMessage(hook + ": Capture time: " + (end - start).ToString());
+                    //this.DebugMessage(hook + ": Request time: " + (Timer.ElapsedMilliseconds - start_time).ToString());
                 }
 
                 #endregion
 
-                if (this.Config.ShowOverlay)
-                {
-                    #region Draw Overlay
+                //if (this.Config.ShowOverlay)
+                //{
+                //    #region Draw Overlay
 
-                    // Check if overlay needs to be initialised
-                    if ((_overlayEngine == null)) { DebugMessage("Check if overlay needs to be initialised"); };
+                //    // Check if overlay needs to be initialised
+                //    if ((_overlayEngine == null)) { DebugMessage("Check if overlay needs to be initialised"); };
 
-                    //if (device.TestCooperativeLevel().Success)
-                    //{
-                    //        DebugMessage("TestCoopLevelSuccess"); 
-                        if (_overlayEngine == null || _overlayEngine.NativePtr != device.NativePointer)
-                        {
+                //    //if (device.TestCooperativeLevel().Success)
+                //    //{
+                //    //        DebugMessage("TestCoopLevelSuccess"); 
+                //        if (_overlayEngine == null || _overlayEngine.NativePtr != device.NativePointer)
+                //        {
                    
-                                try
-                                {
-                                    if ((_overlayEngine == null))
-                                    {
-                                        DebugMessage("Overlay Engine is Null");
-                                    }
-                                    else
-                                    {
-                                        DebugMessage("The original pointer is " + _overlayEngine.NativePtr.ToString());
-                                    }
-                                    DebugMessage("The current device  pointer is " + device.NativePointer);
-                                }
-                                catch (Exception e)
-                                {
-                                    DebugMessage(e.ToString());
-                                }
-                                // Cleanup if necessary
+                //                try
+                //                {
+                //                    if ((_overlayEngine == null))
+                //                    {
+                //                        DebugMessage("Overlay Engine is Null");
+                //                    }
+                //                    else
+                //                    {
+                //                        DebugMessage("The original pointer is " + _overlayEngine.NativePtr.ToString());
+                //                    }
+                //                    DebugMessage("The current device  pointer is " + device.NativePointer);
+                //                }
+                //                catch (Exception e)
+                //                {
+                //                    DebugMessage(e.ToString());
+                //                }
+                //                // Cleanup if necessary
 
-                                if (_overlayEngine != null)
-                                {
-                                    DebugMessage("Disposing oE");
-                                    _overlayEngine.Dispose();
-                                }
+                //                if (_overlayEngine != null)
+                //                {
+                //                    DebugMessage("Disposing oE");
+                //                    _overlayEngine.Dispose();
+                //                }
 
 
-                                _overlayEngine = ToDispose(new DX9.DXOverlayEngine());
-                                // Create Overlay
-                                _overlayEngine.Overlays.Add(new Capture.Hook.Common.Overlay
-                                {
-                                    Elements =
-                                    {
-                                        // Add frame rate
-                                        new Capture.Hook.Common.FramesPerSecond(new System.Drawing.Font("Arial", 16, FontStyle.Bold)) { Location = new System.Drawing.Point(5,5), Color = System.Drawing.Color.Red, AntiAliased = true }
-                                        // Example of adding an image to overlay (can implement semi transparency with Tint, e.g. Ting = Color.FromArgb(127, 255, 255, 255))
-                                        ,new Capture.Hook.Common.ImageElement(@"C:\Users\User\Source\Estars_Client\ElectronicGui\Images\UI\logo.png") { Location = new System.Drawing.Point(20, 20) }
-                                    }
-                                });
-                                DebugMessage("INitializing overlay");
-                                DebugMessage(device.TestCooperativeLevel().Success.ToString());
-                                _overlayEngine.Initialise(device);
-                            }
-                            // Draw Overlay(s)
-                        else if (_overlayEngine != null)
-                        {
-                            foreach (var overlay in _overlayEngine.Overlays)
-                                overlay.Frame();
-                            _overlayEngine.Draw();
-                        }
-                    //}
-                    //else
-                    //{
-                    //    _overlayEngine.SpriteOnLostDevice();
-                    //}
-                        #endregion
-                }
+                //                _overlayEngine = ToDispose(new DX9.DXOverlayEngine());
+                //                // Create Overlay
+                //                _overlayEngine.Overlays.Add(new Capture.Hook.Common.Overlay
+                //                {
+                //                    Elements =
+                //                    {
+                //                        // Add frame rate
+                //                        new Capture.Hook.Common.FramesPerSecond(new System.Drawing.Font("Arial", 16, FontStyle.Bold)) { Location = new System.Drawing.Point(5,5), Color = System.Drawing.Color.Red, AntiAliased = true }
+                //                        // Example of adding an image to overlay (can implement semi transparency with Tint, e.g. Ting = Color.FromArgb(127, 255, 255, 255))
+                //                        ,new Capture.Hook.Common.ImageElement(@"C:\Users\User\Source\Estars_Client\ElectronicGui\Images\UI\logo.png") { Location = new System.Drawing.Point(20, 20) }
+                //                    }
+                //                });
+                //                DebugMessage("INitializing overlay");
+                //                DebugMessage(device.TestCooperativeLevel().Success.ToString());
+                //                _overlayEngine.Initialise(device);
+                //            }
+                //            // Draw Overlay(s)
+                //        else if (_overlayEngine != null)
+                //        {
+                //            foreach (var overlay in _overlayEngine.Overlays)
+                //                overlay.Frame();
+                //            _overlayEngine.Draw();
+                //        }
+                //    //}
+                //    //else
+                //    //{
+                //    //    _overlayEngine.SpriteOnLostDevice();
+                //    //}
+                //        #endregion
+                //}
             }
             catch (Exception e)
             {
