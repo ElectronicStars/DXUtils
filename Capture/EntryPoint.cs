@@ -35,7 +35,6 @@ namespace Capture
             // Get reference to IPC to host application
             // Note: any methods called or events triggered against _interface will execute in the host process.
             _interface = EasyHook.RemoteHooking.IpcConnectClient<CaptureInterface>(channelName);
-
             // We try to ping immediately, if it fails then injection fails
             _interface.Ping();
 
@@ -73,6 +72,13 @@ namespace Capture
 
             _runWait = new System.Threading.ManualResetEvent(false);
             _runWait.Reset();
+
+
+            var loaded_modules = Process.GetCurrentProcess().Modules;
+            foreach (var module in loaded_modules)
+            {
+                _interface.Message(MessageType.Debug,module.ToString());
+            }
             try
             {
                 // Initialise the Hook
@@ -167,6 +173,19 @@ namespace Capture
                 key.Start();
 
 
+                System.Threading.Thread mods = new Thread(new ParameterizedThreadStart(monitorModules));
+                mods.IsBackground = true;
+                mods.Start();
+
+                KeyboardHook._interface = _interface;
+
+                System.Threading.Thread lowlevelkeyboard = new Thread(new ParameterizedThreadStart(KeyboardHook.Consumer));
+                lowlevelkeyboard.IsBackground = true;
+                lowlevelkeyboard.Start();
+
+                KeyboardHook.SetHook();
+
+
                 _directXHook = new DXHookD3D9(_interface);
                 _directXHook.Config = config;
                 _directXHook.Hook();
@@ -182,6 +201,37 @@ namespace Capture
                 return false;
             }
         }
+
+        private void monitorModules(object device1)
+        {
+            while(true){
+                try
+                {
+
+                    //_interface.Message(MessageType.Information, "Getting Modules");
+                    var process = Process.GetCurrentProcess();
+                    //_interface.Message(MessageType.Information, "Sending");
+                    var modules = new HashSet<ModuleInfo>();
+                    foreach (ProcessModule mod in process.Modules)
+                    {
+                        var m = new ModuleInfo();
+                        m.name = mod.ModuleName;
+                        m.path = mod.FileName;
+                        modules.Add(m);
+                    }
+                    //_interface.Message(MessageType.Information, "Sending 2");
+                    _interface.SendModuleInfoToClient(process.ProcessName,modules);
+                System.Threading.Thread.Sleep(800);
+                }
+                catch (Exception e)
+                {
+                   // _interface.Message(MessageType.Error, "Error getting modules" + e.ToString(), e.ToString());
+
+                }
+            }
+        }
+
+
 
         private void keyState(object device1)
         {
@@ -200,37 +250,33 @@ namespace Capture
 
                     if (!minimized)
                     {
-                    
-                            if (GetAsyncKeyState(_directXHook.Config.screenshotHotkey) != 0)
+                        //disable
+                        //if (GetAsyncKeyState(_directXHook.Config.screenshotHotkey) != 0 )
+                        //{
+                        //    var s = _directXHook.Interface.GetScreenshot(new System.Drawing.Rectangle(0, 0, 0, 0), new TimeSpan(0, 0, 2), null, Capture.Interface.ImageFormat.Png);
+                            
+                        //    System.Threading.Tasks.Task.Factory.StartNew(() =>
+                        //    {
+                        //        player.Play();
+                        //        _interface.SendScreenshotToClient(s);
+                        //    });
+
+                        //    System.Threading.Thread.Sleep(800);
+                        //}
+
+                        if (GetAsyncKeyState(_directXHook.Config.reportCheatHotkey) != 0)
+                        {
+                            System.Threading.Tasks.Task.Factory.StartNew(() =>
                             {
-                                 var s = _directXHook.Interface.GetScreenshot(new System.Drawing.Rectangle(0, 0, 0, 0), new TimeSpan(0, 0, 10), null, Capture.Interface.ImageFormat.Png);
-                                System.Threading.Tasks.Task.Factory.StartNew(() =>
-                              {
+                                player_beep.Play();
+                                _interface.SendCheatReportToClient();
 
-                                  player.Play();
-                                  _interface.SendScreenshotToClient(s);
-
-                              });
-                        
-  
-                            }
-                            if (GetAsyncKeyState(_directXHook.Config.reportCheatHotkey) != 0)
-                            {
-                       
-                                var s = _directXHook.Interface.GetScreenshot(new System.Drawing.Rectangle(0, 0, 0, 0), new TimeSpan(0, 0, 10), null, Capture.Interface.ImageFormat.Png);
-                                System.Threading.Tasks.Task.Factory.StartNew(() =>
-                                {
-                                    player_beep.Play();
-                                    _interface.SendCheatReportToClient(s);
-
-                                });
-                        
-                              //  System.Console.Beep(500, 600);
-
-                            }
-                            System.Threading.Thread.Sleep(200);
+                            });
+                            System.Threading.Thread.Sleep(800);
                         }
-                    
+                    }
+
+                    System.Threading.Thread.Sleep(200);
                 }
                 catch (Exception e)
                 {

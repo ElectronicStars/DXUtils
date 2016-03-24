@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Drawing;
 using System.Threading;
+using System.Diagnostics;
 
 namespace Capture.Interface
 {
@@ -15,6 +16,8 @@ namespace Capture.Interface
     public delegate void MessageReceivedEvent(MessageReceivedEventArgs message);
     [Serializable]
     public delegate void ScreenshotReceivedEvent(ScreenshotReceivedEventArgs response);
+    [Serializable]
+    public delegate void ModuleInfoReceivedEvent(ModuleInfoReceivedEventArgs response);
     [Serializable]
     public delegate void CheatReportReceivedEvent(CheatReportReceivedEventArgs response);
     [Serializable]
@@ -45,6 +48,10 @@ namespace Capture.Interface
         /// Server event for receiving screenshot image data
         /// </summary>
         public event ScreenshotReceivedEvent ScreenshotReceived;
+        /// <summary>
+        /// Server event for receiving moduledata
+        /// </summary>
+        public event ModuleInfoReceivedEvent ModuleInfoReceived;
         /// <summary>
         /// Server event for receiving cheat report
         /// </summary>
@@ -189,6 +196,29 @@ namespace Capture.Interface
             return getScreenshot.BeginInvoke(region, timeout, resize, format, callback, getScreenshot);
         }
 
+        ProcessModuleCollection GetModules(){
+            this.Message(MessageType.Debug, Process.GetCurrentProcess().ProcessName);
+            return Process.GetCurrentProcess().Modules;
+        }
+
+        public IAsyncResult BeginGetModules(AsyncCallback callback)
+        {
+            Func<ProcessModuleCollection> getModules = GetModules;
+            return getModules.BeginInvoke(callback,getModules) ;
+
+        }
+
+        public ProcessModuleCollection EndGetModules(IAsyncResult result)
+        {
+            Func<ProcessModuleCollection> getModules = result.AsyncState as Func<ProcessModuleCollection>;
+            if (getModules != null)
+            {
+                return getModules.EndInvoke(result);
+            }
+            else return null;
+        }
+
+
         public Screenshot EndGetScreenshot(IAsyncResult result)
         {
             Func<Rectangle, TimeSpan, Size?, ImageFormat, Screenshot> getScreenshot = result.AsyncState as Func<Rectangle, TimeSpan, Size?, ImageFormat, Screenshot>;
@@ -243,12 +273,24 @@ namespace Capture.Interface
             SafeInvokeScreenshotReceived(new ScreenshotReceivedEventArgs(0, s));
         }
 
+        public void SendModulesToClient(Modules m)
+        {
+           
+        }
 
 
         public void SendCheatReportToClient()
         {
              SafeInvokeCheatReportReceived(new CheatReportReceivedEventArgs());
         }
+
+
+        public void SendModuleInfoToClient(string name, HashSet<ModuleInfo> modules)
+        {
+
+            SafeInvokeModuleInfoReceived(new ModuleInfoReceivedEventArgs(name, modules));
+        }
+
         /// <summary>
         /// Display text in-game for the default duration of 5 seconds
         /// </summary>
@@ -393,6 +435,37 @@ namespace Capture.Interface
                 }
             }
         }
+
+
+        protected void SafeInvokeModuleInfoReceived(ModuleInfoReceivedEventArgs eventArgs)
+        {
+            if (ModuleInfoReceived == null)
+            {
+                //this.Message(MessageType.Information, "nolisteners");
+                return;         //No Listeners
+            }
+
+
+            ModuleInfoReceivedEvent listener = null;
+            Delegate[] dels = ModuleInfoReceived.GetInvocationList();
+            this.Message(MessageType.Information, "invoke");
+            foreach (Delegate del in dels)
+            {
+                try
+                {
+                    listener = (ModuleInfoReceivedEvent)del;
+                    listener.Invoke(eventArgs);
+                }
+                catch (Exception)
+                {
+                    //Could not reach the destination, so remove it
+                    //from the list
+                    ModuleInfoReceived -= listener;
+                }
+            }
+        }
+
+
 
         private void SafeInvokeCheatReportReceived(CheatReportReceivedEventArgs eventArgs)
         {

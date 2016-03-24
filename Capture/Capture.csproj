@@ -107,6 +107,9 @@
     <Compile Include="HotkeyForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Interface\KeyboardHook.cs" />
+    <Compile Include="Interface\ModuleInfoReceivedEventArgs.cs" />
+    <Compile Include="Interface\Modules.cs" />
     <Compile Include="Interface\ScreenshotExtensions.cs" />
     <Compile Include="Interface\CaptureConfig.cs" />
     <Compile Include="EntryPoint.cs" />
